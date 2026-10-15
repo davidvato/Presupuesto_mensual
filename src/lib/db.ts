@@ -39,11 +39,17 @@ export async function ensureDatabaseInitialized() {
         type VARCHAR(50) NOT NULL,
         type_label VARCHAR(100) NOT NULL,
         icon_name VARCHAR(50) NOT NULL,
-        color VARCHAR(20) NOT NULL,
-        order_num INTEGER NOT NULL DEFAULT 0,
+        order_num BIGINT NOT NULL DEFAULT 0,
         is_active BOOLEAN NOT NULL DEFAULT true
       );
     `;
+
+    // Ensure order_num column is BIGINT on existing databases
+    try {
+      await sql`ALTER TABLE categories ALTER COLUMN order_num TYPE BIGINT;`;
+    } catch {
+      // Column may already be BIGINT or up to date
+    }
 
     // 2. Create monthly_planned table
     await sql`
@@ -80,9 +86,21 @@ export async function ensureDatabaseInitialized() {
       );
     `;
 
-    // Check if categories need seeding
-    const existingCats = await sql`SELECT COUNT(*)::int as count FROM categories;`;
-    if (existingCats[0].count === 0) {
+    // 5. Create app_settings table to track initialization lock
+    await sql`
+      CREATE TABLE IF NOT EXISTS app_settings (
+        key VARCHAR(100) PRIMARY KEY,
+        value TEXT NOT NULL
+      );
+    `;
+
+    // Only seed once on initial brand new database setup
+    const initRows = await sql`
+      SELECT value FROM app_settings WHERE key = 'is_initialized';
+    `;
+    const isAlreadyInitialized = initRows.length > 0 && initRows[0].value === 'true';
+
+    if (!isAlreadyInitialized) {
       // Seed categories
       for (const cat of INITIAL_CATEGORIES) {
         await sql`
@@ -116,17 +134,12 @@ export async function ensureDatabaseInitialized() {
           ON CONFLICT (id) DO NOTHING;
         `;
       }
-    }
 
-    // Ensure initial income transaction exists for 2026-10 if none registered yet
-    const existingIncome = await sql`
-      SELECT COUNT(*)::int as count FROM transactions WHERE period = '2026-10' AND type = 'ingreso';
-    `;
-    if (existingIncome[0].count === 0) {
+      // Mark initialized permanently so user deletes are respected
       await sql`
-        INSERT INTO transactions (id, period, type, category_id, amount, date, concept, payment_method, notes)
-        VALUES ('tx_income_1', '2026-10', 'ingreso', 'cat_general', 13984, '2026-10-01', 'Nómina Quincenal / Ingresos del Mes', 'Transferencia / Nómina', null)
-        ON CONFLICT (id) DO NOTHING;
+        INSERT INTO app_settings (key, value)
+        VALUES ('is_initialized', 'true')
+        ON CONFLICT (key) DO UPDATE SET value = 'true';
       `;
     }
   } catch (err) {

@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS categories (
   type_label VARCHAR(100) NOT NULL,
   icon_name VARCHAR(50) NOT NULL,
   color VARCHAR(20) NOT NULL,
-  order_num INTEGER NOT NULL DEFAULT 0,
+  order_num BIGINT NOT NULL DEFAULT 0,
   is_active BOOLEAN NOT NULL DEFAULT true
 );
 

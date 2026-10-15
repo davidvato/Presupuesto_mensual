@@ -81,14 +81,23 @@ export async function GET(request: Request) {
     `;
     const availablePeriods = periodsRows.map((p) => p.period);
 
-    return NextResponse.json({
-      isDatabaseConnected: true,
-      categories: categoriesRows,
-      plannedAmounts,
-      generalInfo,
-      transactions,
-      availablePeriods,
-    });
+    return NextResponse.json(
+      {
+        isDatabaseConnected: true,
+        categories: categoriesRows,
+        plannedAmounts,
+        generalInfo,
+        transactions,
+        availablePeriods,
+      },
+      {
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+          Pragma: "no-cache",
+          Expires: "0",
+        },
+      }
+    );
   } catch (err: any) {
     console.error("Error in GET /api/budget:", err);
     return NextResponse.json(

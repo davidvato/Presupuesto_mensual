@@ -142,20 +142,14 @@ export function BudgetProvider({ children }: { children: React.ReactNode }) {
   const loadPeriodData = useCallback(async (period: string) => {
     try {
       setIsLoading(true);
-      const [cats, planned, txs, periods, genInfo] = await Promise.all([
-        budgetService.getCategories(),
-        budgetService.getPlannedAmounts(period),
-        budgetService.getTransactions(),
-        budgetService.getAvailablePeriods(),
-        budgetService.getGeneralInfo(period),
-      ]);
+      const data = await budgetService.loadAll(period);
 
-      setCategories(cats);
-      setPlannedAmounts(planned);
-      setAllTransactions(txs);
-      setAvailablePeriods(periods);
-      setGeneralInfoState(genInfo);
-      setIsDatabaseActive(budgetService.isDatabaseActive());
+      setCategories(data.categories);
+      setPlannedAmounts(data.plannedAmounts);
+      setAllTransactions(data.transactions);
+      setAvailablePeriods(data.availablePeriods);
+      setGeneralInfoState(data.generalInfo);
+      setIsDatabaseActive(data.isDatabaseActive);
     } catch (err) {
       console.error("Error loading budget data:", err);
     } finally {

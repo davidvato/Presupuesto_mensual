@@ -78,6 +78,12 @@ export function CategoryModal() {
     }
 
     const typeConfig = CATEGORY_TYPES.find((t) => t.type === type);
+    const nextOrder = editingCategory
+      ? editingCategory.order
+      : categories.length > 0
+      ? Math.max(...categories.map((c) => c.order || 0)) + 1
+      : 1;
+
     const categoryToSave: Category = {
       id: editingCategory ? editingCategory.id : `cat_${Date.now()}`,
       name: name.trim(),
@@ -85,7 +91,7 @@ export function CategoryModal() {
       typeLabel: typeConfig?.label || "Gastos",
       iconName,
       color,
-      order: editingCategory ? editingCategory.order : Date.now(),
+      order: nextOrder,
       isActive: true,
     };
 

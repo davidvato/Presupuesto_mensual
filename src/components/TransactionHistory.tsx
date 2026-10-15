@@ -239,7 +239,12 @@ export function TransactionHistory({
                 {/* Right: Amount & Actions */}
                 <div className="flex items-center gap-3 shrink-0">
                   <div className="text-right">
-                    <span className="font-mono font-bold text-sm sm:text-base text-white block">
+                    <span
+                      className={`font-mono font-bold text-sm sm:text-base block ${
+                        tx.type === "ingreso" ? "text-emerald-400" : "text-white"
+                      }`}
+                    >
+                      {tx.type === "ingreso" ? "+" : ""}
                       {formatMXN(tx.amount)}
                     </span>
                   </div>

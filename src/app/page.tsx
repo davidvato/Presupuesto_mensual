@@ -3,6 +3,7 @@
 import React, { useState, useRef } from "react";
 import { BudgetProvider, useBudget } from "@/context/BudgetContext";
 import { Header } from "@/components/Header";
+import { GeneralInfoPanel } from "@/components/GeneralInfoPanel";
 import { KpiCards } from "@/components/KpiCards";
 import { BudgetCharts } from "@/components/BudgetCharts";
 import { CategoryList } from "@/components/CategoryList";
@@ -52,7 +53,12 @@ function DashboardContent() {
       <Header />
 
       {/* Main Dashboard Body */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-7 space-y-6 sm:space-y-7">
+        {/* Module 1: Top Dashboard - Información General del Mes */}
+        <section aria-label="Información General del Mes">
+          <GeneralInfoPanel />
+        </section>
+
         {/* Executive KPI Cards */}
         <section aria-label="Métricas Principales">
           <KpiCards />

@@ -19,9 +19,12 @@ export interface Category {
   isActive: boolean;
 }
 
+export type TransactionType = 'gasto' | 'ingreso';
+
 export interface Transaction {
   id: string;
   period: string; // Format: 'YYYY-MM', e.g., '2026-10'
+  type?: TransactionType; // Default: 'gasto'
   categoryId: string;
   amount: number;
   date: string; // Format: 'YYYY-MM-DD'
@@ -51,6 +54,16 @@ export interface BudgetSummary {
   totalPercentage: number;
   status: BudgetStatus;
   categorySummaries: CategorySummary[];
+}
+
+export interface MonthlyGeneralInfo {
+  period: string;
+  income: number; // Ingresos del Mes (e.g. $13,984.00 MXN)
+  availableCash: number; // Efectivo Disponible (Cash flow libre, e.g. $1,282.00 MXN)
+  totalTcBbva: number; // Consolidado TC BBVA (Servicios + Gasolina + MSI + Varios)
+  totalTcInvex: number; // Consolidado TC Invex (MSI + Gasolina)
+  totalServicios: number; // Watchlist Servicios
+  totalGasolina: number; // Watchlist Gasolina
 }
 
 export interface PeriodInfo {

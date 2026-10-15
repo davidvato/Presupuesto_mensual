@@ -3,6 +3,7 @@ import {
   INITIAL_CATEGORIES,
   INITIAL_PLANNED_AMOUNTS,
   INITIAL_SAMPLE_TRANSACTIONS,
+  INITIAL_GENERAL_INFO,
 } from "@/data/initialData";
 
 export interface IBudgetService {
@@ -14,6 +15,9 @@ export interface IBudgetService {
   setPlannedAmount(period: string, categoryId: string, amount: number): Promise<void>;
   setAllPlannedAmounts(period: string, amounts: Record<string, number>): Promise<void>;
   cloneBudget(fromPeriod: string, toPeriod: string): Promise<void>;
+
+  getGeneralInfo(period: string): Promise<{ income: number; availableCash: number }>;
+  setGeneralInfo(period: string, info: { income: number; availableCash: number }): Promise<void>;
   
   getTransactions(period?: string): Promise<Transaction[]>;
   addTransaction(tx: Omit<Transaction, "id" | "createdAt">): Promise<Transaction>;
@@ -25,10 +29,11 @@ export interface IBudgetService {
 }
 
 const STORAGE_KEYS = {
-  CATEGORIES: "finance_app_categories_v2",
-  PLANNED_PREFIX: "finance_app_planned_v2_",
-  TRANSACTIONS: "finance_app_transactions_v2",
-  PERIODS: "finance_app_periods_v2",
+  CATEGORIES: "finance_app_categories_v3",
+  PLANNED_PREFIX: "finance_app_planned_v3_",
+  GENERAL_INFO_PREFIX: "finance_app_general_info_v3_",
+  TRANSACTIONS: "finance_app_transactions_v3",
+  PERIODS: "finance_app_periods_v3",
 };
 
 export class LocalStorageBudgetService implements IBudgetService {
@@ -44,7 +49,6 @@ export class LocalStorageBudgetService implements IBudgetService {
       if (stored) {
         return JSON.parse(stored);
       }
-      // Seed default
       localStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(INITIAL_CATEGORIES));
       return INITIAL_CATEGORIES;
     } catch (err) {
@@ -77,6 +81,35 @@ export class LocalStorageBudgetService implements IBudgetService {
     }
   }
 
+  // GENERAL INFO (INCOME & CASH FLOW)
+  async getGeneralInfo(period: string): Promise<{ income: number; availableCash: number }> {
+    if (!this.isBrowser()) {
+      return INITIAL_GENERAL_INFO;
+    }
+    try {
+      const key = `${STORAGE_KEYS.GENERAL_INFO_PREFIX}${period}`;
+      const stored = localStorage.getItem(key);
+      if (stored) {
+        return JSON.parse(stored);
+      }
+      if (period === "2026-10") {
+        localStorage.setItem(key, JSON.stringify(INITIAL_GENERAL_INFO));
+        return INITIAL_GENERAL_INFO;
+      }
+      return INITIAL_GENERAL_INFO;
+    } catch {
+      return INITIAL_GENERAL_INFO;
+    }
+  }
+
+  async setGeneralInfo(period: string, info: { income: number; availableCash: number }): Promise<void> {
+    if (this.isBrowser()) {
+      const key = `${STORAGE_KEYS.GENERAL_INFO_PREFIX}${period}`;
+      localStorage.setItem(key, JSON.stringify(info));
+      await this.registerPeriod(period);
+    }
+  }
+
   // PLANNED AMOUNTS
   async getPlannedAmounts(period: string): Promise<Record<string, number>> {
     if (!this.isBrowser()) {
@@ -89,14 +122,12 @@ export class LocalStorageBudgetService implements IBudgetService {
         return JSON.parse(stored);
       }
 
-      // If period is October 2026 and nothing is saved, seed with initial
       if (period === "2026-10") {
         localStorage.setItem(key, JSON.stringify(INITIAL_PLANNED_AMOUNTS));
         await this.registerPeriod(period);
         return INITIAL_PLANNED_AMOUNTS;
       }
 
-      // If other period, try to default to latest available or base categories
       const categories = await this.getCategories();
       const defaultAmounts: Record<string, number> = {};
       categories.forEach((cat) => {
@@ -127,7 +158,9 @@ export class LocalStorageBudgetService implements IBudgetService {
 
   async cloneBudget(fromPeriod: string, toPeriod: string): Promise<void> {
     const sourceAmounts = await this.getPlannedAmounts(fromPeriod);
+    const sourceInfo = await this.getGeneralInfo(fromPeriod);
     await this.setAllPlannedAmounts(toPeriod, { ...sourceAmounts });
+    await this.setGeneralInfo(toPeriod, { ...sourceInfo });
     await this.registerPeriod(toPeriod);
   }
 
@@ -161,6 +194,7 @@ export class LocalStorageBudgetService implements IBudgetService {
     const all = await this.getTransactions();
     const newTx: Transaction = {
       ...txData,
+      type: txData.type || "gasto",
       id: `tx_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
       createdAt: new Date().toISOString(),
     };
@@ -222,6 +256,7 @@ export class LocalStorageBudgetService implements IBudgetService {
     try {
       localStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(INITIAL_CATEGORIES));
       localStorage.setItem(`${STORAGE_KEYS.PLANNED_PREFIX}2026-10`, JSON.stringify(INITIAL_PLANNED_AMOUNTS));
+      localStorage.setItem(`${STORAGE_KEYS.GENERAL_INFO_PREFIX}2026-10`, JSON.stringify(INITIAL_GENERAL_INFO));
       localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(INITIAL_SAMPLE_TRANSACTIONS));
       localStorage.setItem(STORAGE_KEYS.PERIODS, JSON.stringify(["2026-10"]));
     } catch (err) {

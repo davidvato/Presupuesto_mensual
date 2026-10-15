@@ -40,6 +40,7 @@ interface BudgetContextType {
   generalInfo: MonthlyGeneralInfo;
   availablePeriods: string[];
   isLoading: boolean;
+  isDatabaseActive: boolean;
 
   // Actions
   updatePlannedAmount: (categoryId: string, amount: number) => Promise<void>;
@@ -86,6 +87,7 @@ export function BudgetProvider({ children }: { children: React.ReactNode }) {
   const [availablePeriods, setAvailablePeriods] = useState<string[]>(["2026-10"]);
   const [generalInfoState, setGeneralInfoState] = useState<{ income: number; availableCash: number }>(INITIAL_GENERAL_INFO);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isDatabaseActive, setIsDatabaseActive] = useState<boolean>(false);
 
   // Modals state
   const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
@@ -153,6 +155,7 @@ export function BudgetProvider({ children }: { children: React.ReactNode }) {
       setAllTransactions(txs);
       setAvailablePeriods(periods);
       setGeneralInfoState(genInfo);
+      setIsDatabaseActive(budgetService.isDatabaseActive());
     } catch (err) {
       console.error("Error loading budget data:", err);
     } finally {
@@ -442,6 +445,7 @@ export function BudgetProvider({ children }: { children: React.ReactNode }) {
         generalInfo,
         availablePeriods,
         isLoading,
+        isDatabaseActive,
 
         updatePlannedAmount,
         updateGeneralInfo,

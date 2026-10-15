@@ -19,7 +19,7 @@ import { ShieldCheck, Sparkles } from "lucide-react";
 function DashboardContent() {
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string | undefined>(undefined);
   const transactionsSectionRef = useRef<HTMLDivElement>(null);
-  const { isLoading } = useBudget();
+  const { isLoading, isDatabaseActive } = useBudget();
 
   const handleSelectCategoryFilter = (categoryId: string) => {
     setSelectedCategoryFilter(categoryId);
@@ -87,7 +87,9 @@ function DashboardContent() {
           <div className="flex items-center gap-2">
             <ShieldCheck className="w-4 h-4 text-emerald-400" />
             <span>
-              Arquitectura desacoplada • Datos persistidos localmente con soporte listo para Supabase / PostgreSQL
+              {isDatabaseActive
+                ? "Conectado a Neon PostgreSQL Serverless • Sincronización en la nube activa"
+                : "Almacenamiento Local • Agrega la variable DATABASE_URL en Vercel para conectar Neon"}
             </span>
           </div>
           <div>

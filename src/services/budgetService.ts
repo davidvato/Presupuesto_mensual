@@ -7,6 +7,8 @@ import {
 } from "@/data/initialData";
 
 export interface IBudgetService {
+  isDatabaseActive(): boolean;
+  
   getCategories(): Promise<Category[]>;
   saveCategory(category: Category): Promise<Category>;
   deleteCategory(categoryId: string): Promise<void>;
@@ -36,34 +38,37 @@ const STORAGE_KEYS = {
   PERIODS: "finance_app_periods_v3",
 };
 
+/**
+ * LocalStorage Fallback Implementation
+ */
 export class LocalStorageBudgetService implements IBudgetService {
+  isDatabaseActive(): boolean {
+    return false;
+  }
+
   private isBrowser(): boolean {
     return typeof window !== "undefined" && typeof window.localStorage !== "undefined";
   }
 
-  // CATEGORIES
   async getCategories(): Promise<Category[]> {
     if (!this.isBrowser()) return INITIAL_CATEGORIES;
     try {
       const stored = localStorage.getItem(STORAGE_KEYS.CATEGORIES);
-      if (stored) {
-        return JSON.parse(stored);
-      }
+      if (stored) return JSON.parse(stored);
       localStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(INITIAL_CATEGORIES));
       return INITIAL_CATEGORIES;
-    } catch (err) {
-      console.error("Error reading categories from localStorage:", err);
+    } catch {
       return INITIAL_CATEGORIES;
     }
   }
 
   async saveCategory(category: Category): Promise<Category> {
     const categories = await this.getCategories();
-    const existingIndex = categories.findIndex((c) => c.id === category.id);
+    const index = categories.findIndex((c) => c.id === category.id);
     let updated: Category[];
-    if (existingIndex >= 0) {
+    if (index >= 0) {
       updated = [...categories];
-      updated[existingIndex] = category;
+      updated[index] = category;
     } else {
       updated = [...categories, category];
     }
@@ -81,17 +86,12 @@ export class LocalStorageBudgetService implements IBudgetService {
     }
   }
 
-  // GENERAL INFO (INCOME & CASH FLOW)
   async getGeneralInfo(period: string): Promise<{ income: number; availableCash: number }> {
-    if (!this.isBrowser()) {
-      return INITIAL_GENERAL_INFO;
-    }
+    if (!this.isBrowser()) return INITIAL_GENERAL_INFO;
     try {
       const key = `${STORAGE_KEYS.GENERAL_INFO_PREFIX}${period}`;
       const stored = localStorage.getItem(key);
-      if (stored) {
-        return JSON.parse(stored);
-      }
+      if (stored) return JSON.parse(stored);
       if (period === "2026-10") {
         localStorage.setItem(key, JSON.stringify(INITIAL_GENERAL_INFO));
         return INITIAL_GENERAL_INFO;
@@ -110,17 +110,12 @@ export class LocalStorageBudgetService implements IBudgetService {
     }
   }
 
-  // PLANNED AMOUNTS
   async getPlannedAmounts(period: string): Promise<Record<string, number>> {
-    if (!this.isBrowser()) {
-      return period === "2026-10" ? INITIAL_PLANNED_AMOUNTS : {};
-    }
+    if (!this.isBrowser()) return period === "2026-10" ? INITIAL_PLANNED_AMOUNTS : {};
     try {
       const key = `${STORAGE_KEYS.PLANNED_PREFIX}${period}`;
       const stored = localStorage.getItem(key);
-      if (stored) {
-        return JSON.parse(stored);
-      }
+      if (stored) return JSON.parse(stored);
 
       if (period === "2026-10") {
         localStorage.setItem(key, JSON.stringify(INITIAL_PLANNED_AMOUNTS));
@@ -134,8 +129,7 @@ export class LocalStorageBudgetService implements IBudgetService {
         defaultAmounts[cat.id] = INITIAL_PLANNED_AMOUNTS[cat.id] || 0;
       });
       return defaultAmounts;
-    } catch (err) {
-      console.error("Error reading planned amounts:", err);
+    } catch {
       return {};
     }
   }
@@ -164,7 +158,6 @@ export class LocalStorageBudgetService implements IBudgetService {
     await this.registerPeriod(toPeriod);
   }
 
-  // TRANSACTIONS
   async getTransactions(period?: string): Promise<Transaction[]> {
     if (!this.isBrowser()) {
       return period ? INITIAL_SAMPLE_TRANSACTIONS.filter((t) => t.period === period) : INITIAL_SAMPLE_TRANSACTIONS;
@@ -184,8 +177,7 @@ export class LocalStorageBudgetService implements IBudgetService {
         return list.filter((t) => t.period === period);
       }
       return list;
-    } catch (err) {
-      console.error("Error reading transactions:", err);
+    } catch {
       return [];
     }
   }
@@ -224,7 +216,6 @@ export class LocalStorageBudgetService implements IBudgetService {
     }
   }
 
-  // PERIODS
   private async registerPeriod(period: string): Promise<void> {
     if (!this.isBrowser()) return;
     try {
@@ -242,9 +233,7 @@ export class LocalStorageBudgetService implements IBudgetService {
     if (!this.isBrowser()) return ["2026-10"];
     try {
       const stored = localStorage.getItem(STORAGE_KEYS.PERIODS);
-      if (stored) {
-        return JSON.parse(stored);
-      }
+      if (stored) return JSON.parse(stored);
       return ["2026-10"];
     } catch {
       return ["2026-10"];
@@ -265,5 +254,231 @@ export class LocalStorageBudgetService implements IBudgetService {
   }
 }
 
-// Export singleton instance for easy import and injection
-export const budgetService: IBudgetService = new LocalStorageBudgetService();
+/**
+ * Neon Database Service with automatic LocalStorage fallback
+ */
+export class NeonHybridBudgetService implements IBudgetService {
+  private localService = new LocalStorageBudgetService();
+  private isConnectedToNeon = false;
+  private hasCheckedConnection = false;
+
+  isDatabaseActive(): boolean {
+    return this.isConnectedToNeon;
+  }
+
+  private async checkConnection(period: string = "2026-10"): Promise<any> {
+    if (typeof window === "undefined") return null;
+    try {
+      const res = await fetch(`/api/budget?period=${period}`);
+      if (res.ok) {
+        const data = await res.json();
+        this.isConnectedToNeon = Boolean(data.isDatabaseConnected);
+        this.hasCheckedConnection = true;
+        return data;
+      }
+    } catch {
+      this.isConnectedToNeon = false;
+    }
+    this.hasCheckedConnection = true;
+    return null;
+  }
+
+  async getCategories(): Promise<Category[]> {
+    if (!this.hasCheckedConnection) {
+      const data = await this.checkConnection();
+      if (this.isConnectedToNeon && data?.categories) {
+        return data.categories;
+      }
+    }
+    if (this.isConnectedToNeon) {
+      const data = await this.checkConnection();
+      if (data?.categories) return data.categories;
+    }
+    return this.localService.getCategories();
+  }
+
+  async saveCategory(category: Category): Promise<Category> {
+    if (this.isConnectedToNeon) {
+      try {
+        const res = await fetch("/api/categories", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(category),
+        });
+        if (res.ok) return category;
+      } catch (err) {
+        console.error("Neon saveCategory error, falling back to local:", err);
+      }
+    }
+    return this.localService.saveCategory(category);
+  }
+
+  async deleteCategory(categoryId: string): Promise<void> {
+    if (this.isConnectedToNeon) {
+      try {
+        const res = await fetch(`/api/categories?id=${categoryId}`, { method: "DELETE" });
+        if (res.ok) return;
+      } catch (err) {
+        console.error("Neon deleteCategory error, falling back to local:", err);
+      }
+    }
+    return this.localService.deleteCategory(categoryId);
+  }
+
+  async getPlannedAmounts(period: string): Promise<Record<string, number>> {
+    const data = await this.checkConnection(period);
+    if (this.isConnectedToNeon && data?.plannedAmounts) {
+      return data.plannedAmounts;
+    }
+    return this.localService.getPlannedAmounts(period);
+  }
+
+  async setPlannedAmount(period: string, categoryId: string, amount: number): Promise<void> {
+    if (this.isConnectedToNeon) {
+      try {
+        const res = await fetch("/api/planned", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ period, categoryId, amount }),
+        });
+        if (res.ok) return;
+      } catch (err) {
+        console.error("Neon setPlannedAmount error, falling back to local:", err);
+      }
+    }
+    return this.localService.setPlannedAmount(period, categoryId, amount);
+  }
+
+  async setAllPlannedAmounts(period: string, amounts: Record<string, number>): Promise<void> {
+    if (this.isConnectedToNeon) {
+      for (const [catId, amount] of Object.entries(amounts)) {
+        await this.setPlannedAmount(period, catId, amount);
+      }
+      return;
+    }
+    return this.localService.setAllPlannedAmounts(period, amounts);
+  }
+
+  async cloneBudget(fromPeriod: string, toPeriod: string): Promise<void> {
+    if (this.isConnectedToNeon) {
+      try {
+        const res = await fetch("/api/clone", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ fromPeriod, toPeriod }),
+        });
+        if (res.ok) return;
+      } catch (err) {
+        console.error("Neon cloneBudget error, falling back to local:", err);
+      }
+    }
+    return this.localService.cloneBudget(fromPeriod, toPeriod);
+  }
+
+  async getGeneralInfo(period: string): Promise<{ income: number; availableCash: number }> {
+    const data = await this.checkConnection(period);
+    if (this.isConnectedToNeon && data?.generalInfo) {
+      return data.generalInfo;
+    }
+    return this.localService.getGeneralInfo(period);
+  }
+
+  async setGeneralInfo(period: string, info: { income: number; availableCash: number }): Promise<void> {
+    if (this.isConnectedToNeon) {
+      try {
+        const res = await fetch("/api/general-info", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ period, ...info }),
+        });
+        if (res.ok) return;
+      } catch (err) {
+        console.error("Neon setGeneralInfo error, falling back to local:", err);
+      }
+    }
+    return this.localService.setGeneralInfo(period, info);
+  }
+
+  async getTransactions(period?: string): Promise<Transaction[]> {
+    if (period) {
+      const data = await this.checkConnection(period);
+      if (this.isConnectedToNeon && data?.transactions) {
+        return data.transactions;
+      }
+    }
+    return this.localService.getTransactions(period);
+  }
+
+  async addTransaction(txData: Omit<Transaction, "id" | "createdAt">): Promise<Transaction> {
+    if (this.isConnectedToNeon) {
+      try {
+        const res = await fetch("/api/transactions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(txData),
+        });
+        if (res.ok) {
+          const body = await res.json();
+          return body.transaction;
+        }
+      } catch (err) {
+        console.error("Neon addTransaction error, falling back to local:", err);
+      }
+    }
+    return this.localService.addTransaction(txData);
+  }
+
+  async updateTransaction(tx: Transaction): Promise<Transaction> {
+    if (this.isConnectedToNeon) {
+      try {
+        const res = await fetch("/api/transactions", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(tx),
+        });
+        if (res.ok) {
+          const body = await res.json();
+          return body.transaction;
+        }
+      } catch (err) {
+        console.error("Neon updateTransaction error, falling back to local:", err);
+      }
+    }
+    return this.localService.updateTransaction(tx);
+  }
+
+  async deleteTransaction(id: string): Promise<void> {
+    if (this.isConnectedToNeon) {
+      try {
+        const res = await fetch(`/api/transactions?id=${id}`, { method: "DELETE" });
+        if (res.ok) return;
+      } catch (err) {
+        console.error("Neon deleteTransaction error, falling back to local:", err);
+      }
+    }
+    return this.localService.deleteTransaction(id);
+  }
+
+  async getAvailablePeriods(): Promise<string[]> {
+    const data = await this.checkConnection();
+    if (this.isConnectedToNeon && data?.availablePeriods) {
+      return data.availablePeriods;
+    }
+    return this.localService.getAvailablePeriods();
+  }
+
+  async resetToDefaults(): Promise<void> {
+    if (this.isConnectedToNeon) {
+      try {
+        await fetch("/api/reset", { method: "POST" });
+        return;
+      } catch (err) {
+        console.error("Neon resetToDefaults error, falling back to local:", err);
+      }
+    }
+    return this.localService.resetToDefaults();
+  }
+}
+
+// Export singleton instance with Neon + Local fallback
+export const budgetService: IBudgetService = new NeonHybridBudgetService();

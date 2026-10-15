@@ -29,6 +29,7 @@ export function Header() {
     exportCsv,
     resetAllData,
     requestConfirm,
+    isDatabaseActive,
   } = useBudget();
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -56,6 +57,23 @@ export function Header() {
                   <span className="text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                     Mensual MX
                   </span>
+                  {isDatabaseActive ? (
+                    <span
+                      className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 flex items-center gap-1"
+                      title="Sincronizado con Neon PostgreSQL"
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      <span>Neon DB</span>
+                    </span>
+                  ) : (
+                    <span
+                      className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-zinc-850 text-zinc-400 border border-zinc-800 flex items-center gap-1"
+                      title="Almacenamiento Local (Conecta Neon en Vercel)"
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-zinc-500" />
+                      <span>Local</span>
+                    </span>
+                  )}
                 </div>
                 <p className="text-xs text-zinc-400">
                   Control de Presupuesto vs. Gasto Real

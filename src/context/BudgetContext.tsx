@@ -50,7 +50,7 @@ interface BudgetContextType {
   addTransaction: (tx: Omit<Transaction, "id" | "createdAt">) => Promise<Transaction>;
   updateTransaction: (tx: Transaction) => Promise<Transaction>;
   deleteTransaction: (id: string) => Promise<void>;
-  cloneBudgetToNextMonth: () => Promise<string>;
+  cloneBudgetToNextMonth: (targetPeriod?: string) => Promise<string>;
   exportCsv: () => void;
   resetAllData: () => Promise<void>;
   refreshData: () => Promise<void>;
@@ -223,45 +223,126 @@ export function BudgetProvider({ children }: { children: React.ReactNode }) {
     };
   }, [categories, plannedAmounts, transactions, currentPeriod]);
 
-  // Consolidated General Info (Info General x Mes)
+  // Consolidated General Info (Info General x Mes) - Calculado automáticamente
   const generalInfo = useMemo<MonthlyGeneralInfo>(() => {
+    const periodTransactions = transactions.filter((tx) => tx.period === currentPeriod);
+    const incomeTransactions = periodTransactions.filter((tx) => tx.type === "ingreso");
+    const calculatedIncome = incomeTransactions.reduce((acc, tx) => acc + tx.amount, 0);
+
+    // Si aún no hay ingresos registrados explícitos en el mes de inicio, tomar el valor base de seed
+    const effectiveIncome =
+      calculatedIncome > 0
+        ? calculatedIncome
+        : currentPeriod === "2026-10" && generalInfoState.income > 0
+        ? generalInfoState.income
+        : calculatedIncome;
+
+    // Fórmula solicitada por el usuario:
+    // Efectivo Disponible = ingresos del mes
+    //   - pagos a tarjetas de crédito
+    //   - pagos/transferencia a hipoteca
+    //   - pagos/transferencia a fondo de ahorro
+    //   - pagos/transferencia a gbm
+    //   - pagos/transferencia de TD
     let totalTcBbva = 0;
     let totalTcInvex = 0;
+    let totalHipoteca = 0;
+    let totalFondoAhorro = 0;
+    let totalGbm = 0;
+    let totalTd = 0;
+    let totalOtherExpenses = 0;
     let totalGasolina = 0;
     let totalServicios = 0;
 
-    summary.categorySummaries.forEach((cs) => {
-      const name = cs.category.name.toLowerCase();
-      const id = cs.category.id.toLowerCase();
-      const type = cs.category.type;
+    const catMap = new Map(categories.map((c) => [c.id, c]));
 
-      if (id.includes("tc_bbva") || name.includes("tc bbva")) {
-        totalTcBbva += cs.actual;
-      }
-      if (id.includes("tc_invex") || name.includes("tc invex")) {
-        totalTcInvex += cs.actual;
-      }
-      if (type === "transporte" || name.includes("gasolina")) {
-        totalGasolina += cs.actual;
-      }
-      if (type === "servicios" || name.includes("servicios")) {
-        totalServicios += cs.actual;
-      }
-    });
+    periodTransactions
+      .filter((tx) => tx.type === "gasto" || !tx.type)
+      .forEach((tx) => {
+        const cat = catMap.get(tx.categoryId);
+        const catId = (cat?.id || tx.categoryId || "").toLowerCase();
+        const catName = (cat?.name || "").toLowerCase();
+        const payMethod = (tx.paymentMethod || "").toLowerCase();
+
+        if (catId === "cat_hipoteca" || catName.includes("hipoteca")) {
+          totalHipoteca += tx.amount;
+        } else if (catId === "cat_fondo_ahorro" || catName.includes("ahorro")) {
+          totalFondoAhorro += tx.amount;
+        } else if (catId === "cat_gbm_inversion" || catName.includes("gbm")) {
+          totalGbm += tx.amount;
+        } else if (
+          catId.includes("tc_bbva") ||
+          (payMethod.includes("tc") && payMethod.includes("bbva")) ||
+          catName.includes("tc bbva")
+        ) {
+          totalTcBbva += tx.amount;
+        } else if (
+          catId.includes("tc_invex") ||
+          (payMethod.includes("tc") && payMethod.includes("invex")) ||
+          catName.includes("tc invex")
+        ) {
+          totalTcInvex += tx.amount;
+        } else if (
+          catId.includes("td_") ||
+          catName.includes("td ") ||
+          payMethod.includes("td") ||
+          payMethod.includes("débito") ||
+          payMethod.includes("debito")
+        ) {
+          totalTd += tx.amount;
+        } else if (
+          catId.includes("tc_") ||
+          catName.includes("tc ") ||
+          cat?.type === "credito_msi" ||
+          payMethod.includes("tc") ||
+          payMethod.includes("crédito") ||
+          payMethod.includes("credito")
+        ) {
+          totalTcBbva += tx.amount;
+        } else {
+          totalOtherExpenses += tx.amount;
+        }
+
+        // Watchlists
+        if (cat?.type === "transporte" || catName.includes("gasolina")) {
+          totalGasolina += tx.amount;
+        }
+        if (cat?.type === "servicios" || catName.includes("servicios")) {
+          totalServicios += tx.amount;
+        }
+      });
+
+    const totalTc = totalTcBbva + totalTcInvex;
+    const totalDeductions =
+      totalTc +
+      totalHipoteca +
+      totalFondoAhorro +
+      totalGbm +
+      totalTd +
+      totalOtherExpenses;
+
+    const availableCash = effectiveIncome - totalDeductions;
 
     // Match exact watchlist benchmark for Servicios if base recurring items exist ($2,515.00 MXN)
     const displayServicios = totalServicios > 0 ? Math.max(totalServicios, 2515) : 2515;
 
     return {
       period: currentPeriod,
-      income: generalInfoState.income,
-      availableCash: generalInfoState.availableCash,
+      income: effectiveIncome,
+      availableCash,
       totalTcBbva,
       totalTcInvex,
       totalGasolina,
       totalServicios: displayServicios,
+      totalTc,
+      totalHipoteca,
+      totalFondoAhorro,
+      totalGbm,
+      totalTd,
+      totalOtherExpenses,
+      incomeCount: incomeTransactions.length,
     };
-  }, [summary, currentPeriod, generalInfoState]);
+  }, [categories, transactions, currentPeriod, generalInfoState]);
 
   // Groups by Type for quick overview
   const typeGroups = useMemo<CategoryTypeGroup[]>(() => {
@@ -361,8 +442,8 @@ export function BudgetProvider({ children }: { children: React.ReactNode }) {
     setAllTransactions((prev) => prev.filter((t) => t.id !== id));
   };
 
-  const cloneBudgetToNextMonth = async (): Promise<string> => {
-    const nextPeriod = shiftPeriod(currentPeriod, 1);
+  const cloneBudgetToNextMonth = async (targetPeriod?: string): Promise<string> => {
+    const nextPeriod = targetPeriod || shiftPeriod(currentPeriod, 1);
     await budgetService.cloneBudget(currentPeriod, nextPeriod);
     const periods = await budgetService.getAvailablePeriods();
     setAvailablePeriods(periods);

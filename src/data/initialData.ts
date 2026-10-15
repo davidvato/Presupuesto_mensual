@@ -121,8 +121,19 @@ export const INITIAL_GENERAL_INFO = {
   availableCash: 1282,
 };
 
-// Seed sample transactions for October 2026 totaling exactly $16,346.00 MXN
+// Seed sample transactions for October 2026: Income ($13,984) and Expenses ($16,346)
 export const INITIAL_SAMPLE_TRANSACTIONS: Transaction[] = [
+  {
+    id: "tx_income_1",
+    period: "2026-10",
+    type: "ingreso",
+    categoryId: "cat_general",
+    amount: 13984,
+    date: "2026-10-01",
+    concept: "Nómina Quincenal / Ingresos del Mes",
+    paymentMethod: "Transferencia / Nómina",
+    createdAt: "2026-10-01T08:00:00.000Z",
+  },
   {
     id: "tx_1",
     period: "2026-10",

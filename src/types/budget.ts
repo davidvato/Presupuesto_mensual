@@ -58,12 +58,19 @@ export interface BudgetSummary {
 
 export interface MonthlyGeneralInfo {
   period: string;
-  income: number; // Ingresos del Mes (e.g. $13,984.00 MXN)
-  availableCash: number; // Efectivo Disponible (Cash flow libre, e.g. $1,282.00 MXN)
+  income: number; // Ingresos del Mes (calculado automáticamente de transacciones tipo 'ingreso')
+  availableCash: number; // Efectivo Disponible (ingresos - TC - hipoteca - ahorro - gbm - TD)
   totalTcBbva: number; // Consolidado TC BBVA (Servicios + Gasolina + MSI + Varios)
   totalTcInvex: number; // Consolidado TC Invex (MSI + Gasolina)
   totalServicios: number; // Watchlist Servicios
   totalGasolina: number; // Watchlist Gasolina
+  totalTc: number; // Total tarjetas de crédito
+  totalHipoteca: number; // Pagos a Hipoteca
+  totalFondoAhorro: number; // Pagos a Fondo de Ahorro
+  totalGbm: number; // Pagos a GBM Inversión
+  totalTd: number; // Pagos/transferencias con Tarjeta de Débito
+  totalOtherExpenses: number; // Otros egresos
+  incomeCount: number; // Cantidad de movimientos de ingreso
 }
 
 export interface PeriodInfo {

@@ -36,6 +36,7 @@ export function TransactionHistory({
 
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState(categoryFilter || "all");
+  const [typeFilter, setTypeFilter] = useState<"all" | "gasto" | "ingreso">("all");
   const [sortOrder, setSortOrder] = useState<"date_desc" | "date_asc" | "amount_desc" | "amount_asc">("date_desc");
 
   // Sync prop changes
@@ -55,10 +56,12 @@ export function TransactionHistory({
       .filter((tx) => {
         const matchesCategory =
           selectedCategory === "all" || tx.categoryId === selectedCategory;
+        const matchesType =
+          typeFilter === "all" || (typeFilter === "ingreso" ? tx.type === "ingreso" : tx.type !== "ingreso");
         const matchesSearch =
           tx.concept.toLowerCase().includes(search.toLowerCase()) ||
           (categoryMap.get(tx.categoryId)?.name || "").toLowerCase().includes(search.toLowerCase());
-        return matchesCategory && matchesSearch;
+        return matchesCategory && matchesType && matchesSearch;
       })
       .sort((a, b) => {
         if (sortOrder === "date_desc") {
@@ -124,6 +127,18 @@ export function TransactionHistory({
             />
           </div>
 
+          {/* Type Filter */}
+          <select
+            value={typeFilter}
+            onChange={(e) => setTypeFilter(e.target.value as any)}
+            className="bg-zinc-950/80 border border-zinc-800 rounded-xl text-xs text-zinc-300 py-1.5 px-2.5 focus:outline-none focus:border-emerald-500/50"
+            id="select-tx-type-filter"
+          >
+            <option value="all">Todos los movimientos</option>
+            <option value="gasto">📉 Solo Gastos</option>
+            <option value="ingreso">📈 Solo Ingresos</option>
+          </select>
+
           {/* Category Filter */}
           <select
             value={selectedCategory}
@@ -154,10 +169,11 @@ export function TransactionHistory({
           </select>
 
           {/* Reset filter pill */}
-          {(selectedCategory !== "all" || search) && (
+          {(selectedCategory !== "all" || search || typeFilter !== "all") && (
             <button
               onClick={() => {
                 setSelectedCategory("all");
+                setTypeFilter("all");
                 setSearch("");
                 onClearCategoryFilter?.();
               }}

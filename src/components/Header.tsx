@@ -113,9 +113,19 @@ export function Header() {
               <ChevronLeft className="w-4 h-4" />
             </button>
 
-            <div className="flex items-center gap-2 px-3 py-1 text-center min-w-[160px] justify-center">
-              <Calendar className="w-4 h-4 text-emerald-400" />
-              <span className="font-semibold text-sm md:text-base text-zinc-100 tracking-wide">
+            <div className="relative flex items-center gap-2 px-3 py-1 text-center min-w-[160px] justify-center cursor-pointer group hover:bg-zinc-800/50 rounded-xl transition-colors">
+              <input
+                type="month"
+                value={currentPeriod}
+                onChange={(e) => {
+                  if (e.target.value) setCurrentPeriod(e.target.value);
+                }}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10 [color-scheme:dark]"
+                title="Haz clic para seleccionar cualquier mes y año"
+                id="header-month-picker"
+              />
+              <Calendar className="w-4 h-4 text-emerald-400 group-hover:scale-110 transition-transform" />
+              <span className="font-semibold text-sm md:text-base text-zinc-100 tracking-wide group-hover:text-emerald-300 transition-colors">
                 {periodInfo.label}
               </span>
             </div>

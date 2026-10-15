@@ -177,3 +177,31 @@ export function getCurrentPeriodKey(): string {
   const month = String(now.getMonth() + 1).padStart(2, "0");
   return `${year}-${month}`;
 }
+
+/**
+ * Get yesterday's date formatted as YYYY-MM-DD
+ */
+export function getYesterdayDateString(): string {
+  const date = new Date();
+  date.setDate(date.getDate() - 1);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+/**
+ * Format full human readable date in Spanish: e.g. "15 de Octubre 2026"
+ */
+export function formatFullDateES(dateString: string): string {
+  if (!dateString) return "";
+  try {
+    const [y, m, d] = dateString.split("-").map(Number);
+    if (!y || !m || !d) return dateString;
+    const monthName = MONTH_NAMES_ES[m - 1] || "";
+    return `${d} de ${monthName} ${y}`;
+  } catch {
+    return dateString;
+  }
+}
+

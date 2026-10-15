@@ -1,8 +1,12 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useBudget } from "@/context/BudgetContext";
-import { getTodayDateString } from "@/utils/formatters";
+import {
+  getTodayDateString,
+  getYesterdayDateString,
+  formatFullDateES,
+} from "@/utils/formatters";
 import { TransactionType } from "@/types/budget";
 import {
   X,
@@ -15,6 +19,7 @@ import {
   Check,
   ArrowDownLeft,
   ArrowUpRight,
+  Clock,
 } from "lucide-react";
 
 export function TransactionModal() {
@@ -40,6 +45,8 @@ export function TransactionModal() {
   const [error, setError] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const dateInputRef = useRef<HTMLInputElement>(null);
+
   // Initialize form state
   useEffect(() => {
     if (editingTransaction) {
@@ -56,7 +63,7 @@ export function TransactionModal() {
       setCategoryId(preselectedCategoryId || categories[0]?.id || "");
       setDate(getTodayDateString());
       setConcept("");
-      setPaymentMethod(defaultTransactionType === "ingreso" ? "Transferencia" : "TC BBVA");
+      setPaymentMethod(defaultTransactionType === "ingreso" ? "Transferencia / Nómina" : "TC BBVA");
       setNotes("");
     }
     setError("");
@@ -75,6 +82,11 @@ export function TransactionModal() {
 
     if (type === "gasto" && !categoryId) {
       setError("Por favor selecciona una categoría.");
+      return;
+    }
+
+    if (!date) {
+      setError("Por favor selecciona una fecha válida.");
       return;
     }
 
@@ -119,10 +131,20 @@ export function TransactionModal() {
     }
   };
 
-  const quickAmounts = type === "ingreso" ? [500, 1000, 3000, 5000, 10000] : [100, 250, 500, 1000, 2500];
+  const openDatePicker = () => {
+    if (dateInputRef.current) {
+      if (typeof dateInputRef.current.showPicker === "function") {
+        dateInputRef.current.showPicker();
+      } else {
+        dateInputRef.current.focus();
+      }
+    }
+  };
+
+  const quickAmounts = type === "ingreso" ? [1000, 3000, 5000, 6992, 13984] : [100, 250, 500, 1000, 2500];
   const paymentMethods =
     type === "ingreso"
-      ? ["Transferencia / Nómina", "Depósito Débito BBVA", "Efectivo", "Otro"]
+      ? ["Transferencia / Nómina", "Depósito Débito BBVA", "Efectivo", "Rendimientos GBM", "Otro"]
       : ["TC BBVA", "TD BBVA", "TC Invex", "Efectivo", "Transferencia", "Otro"];
 
   return (
@@ -152,13 +174,13 @@ export function TransactionModal() {
                 {editingTransaction
                   ? "Editar Movimiento"
                   : type === "ingreso"
-                  ? "Registrar Ingreso"
+                  ? "Registrar Ingreso del Mes"
                   : "Registrar Gasto Rápido"}
               </h3>
               <p className="text-xs text-zinc-400">
                 {type === "ingreso"
-                  ? "Suma liquidez a tus ingresos del mes"
-                  : "Añade el consumo a tu presupuesto mensual"}
+                  ? "Suma liquidez a tus ingresos del mes de forma automática"
+                  : "Añade el consumo o pago a tu presupuesto mensual"}
               </p>
             </div>
           </div>
@@ -194,7 +216,7 @@ export function TransactionModal() {
               }`}
             >
               <ArrowUpRight className="w-3.5 h-3.5" />
-              <span>Gasto / Consumo</span>
+              <span>Gasto / Pago</span>
             </button>
             <button
               type="button"
@@ -209,7 +231,7 @@ export function TransactionModal() {
               }`}
             >
               <ArrowDownLeft className="w-3.5 h-3.5" />
-              <span>Ingreso / Entrada</span>
+              <span>Ingreso / Nómina</span>
             </button>
           </div>
 
@@ -258,53 +280,34 @@ export function TransactionModal() {
             </div>
           </div>
 
-          {/* Category Dropdown (Only for Gastos or optional for Ingresos) */}
-          {type === "gasto" ? (
+          {/* Category Dropdown (for Gastos) */}
+          {type === "gasto" && (
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-1.5">
                 Categoría del Presupuesto *
               </label>
-              <div className="relative">
-                <select
-                  value={categoryId}
-                  onChange={(e) => setCategoryId(e.target.value)}
-                  required
-                  className="w-full py-3 px-3 bg-zinc-950 border border-zinc-700/80 rounded-xl text-sm text-zinc-100 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/30 transition-all"
-                  id="select-expense-category"
-                >
-                  <option value="" disabled>
-                    Selecciona una categoría...
-                  </option>
-                  {categories
-                    .filter((c) => c.isActive)
-                    .map((cat) => (
-                      <option key={cat.id} value={cat.id}>
-                        {cat.name} ({cat.typeLabel})
-                      </option>
-                    ))}
-                </select>
-              </div>
-            </div>
-          ) : (
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-1.5">
-                Cuenta Receptora / Destino
-              </label>
               <select
-                value={paymentMethod}
-                onChange={(e) => setPaymentMethod(e.target.value)}
-                className="w-full py-2.5 px-3 bg-zinc-950 border border-zinc-700/80 rounded-xl text-sm text-zinc-100 focus:outline-none focus:border-emerald-500"
+                value={categoryId}
+                onChange={(e) => setCategoryId(e.target.value)}
+                required
+                className="w-full py-2.5 px-3 bg-zinc-950 border border-zinc-700/80 rounded-xl text-sm text-zinc-100 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/30 transition-all"
+                id="select-expense-category"
               >
-                {paymentMethods.map((method) => (
-                  <option key={method} value={method}>
-                    {method}
-                  </option>
-                ))}
+                <option value="" disabled>
+                  Selecciona una categoría...
+                </option>
+                {categories
+                  .filter((c) => c.isActive)
+                  .map((cat) => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.name} ({cat.typeLabel})
+                    </option>
+                  ))}
               </select>
             </div>
           )}
 
-          {/* Concept / Note */}
+          {/* Concept / Description */}
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-1.5">
               {type === "ingreso" ? "Concepto / Origen del Ingreso" : "Concepto / Comercio / Descripción"}
@@ -323,29 +326,100 @@ export function TransactionModal() {
             />
           </div>
 
-          {/* Date & Payment Method Grid for Gastos */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {/* Date Selector & Payment/Receiving Method Side-by-Side */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+            
+            {/* Interactive Date Selector with Calendar Picker */}
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-1.5">
-                Fecha
-              </label>
-              <input
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className="w-full py-2.5 px-3 bg-zinc-950 border border-zinc-700/80 rounded-xl text-sm text-zinc-100 focus:outline-none focus:border-emerald-500"
-              />
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-400">
+                  Selector de Fecha *
+                </label>
+                <button
+                  type="button"
+                  onClick={openDatePicker}
+                  className="text-[11px] text-emerald-400 hover:text-emerald-300 flex items-center gap-1 transition-colors"
+                >
+                  <Calendar className="w-3 h-3" />
+                  <span>Abrir calendario</span>
+                </button>
+              </div>
+
+              <div className="relative">
+                <input
+                  ref={dateInputRef}
+                  type="date"
+                  required
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  className="w-full py-2.5 pl-3 pr-10 bg-zinc-950 border border-zinc-700/80 rounded-xl text-sm text-zinc-100 focus:outline-none focus:border-emerald-500 [color-scheme:dark] cursor-pointer"
+                  id="input-transaction-date"
+                />
+                <button
+                  type="button"
+                  onClick={openDatePicker}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-zinc-400 hover:text-emerald-400 transition-colors"
+                  title="Abrir selector de fecha"
+                  id="btn-calendar-picker"
+                >
+                  <Calendar className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Date Preview & Quick Chips */}
+              <div className="flex items-center justify-between mt-1.5 text-[11px]">
+                <span className="text-zinc-400 font-medium truncate">
+                  {formatFullDateES(date) || date}
+                </span>
+
+                <div className="flex items-center gap-1 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setDate(getTodayDateString())}
+                    className="px-1.5 py-0.5 rounded bg-zinc-800 text-[10px] text-zinc-300 hover:text-white hover:bg-zinc-700"
+                    title="Seleccionar fecha de hoy"
+                  >
+                    Hoy
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDate(getYesterdayDateString())}
+                    className="px-1.5 py-0.5 rounded bg-zinc-800 text-[10px] text-zinc-300 hover:text-white hover:bg-zinc-700"
+                    title="Seleccionar fecha de ayer"
+                  >
+                    Ayer
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDate(`${currentPeriod}-01`)}
+                    className="px-1.5 py-0.5 rounded bg-zinc-800 text-[10px] text-zinc-300 hover:text-white hover:bg-zinc-700"
+                    title="Primer día del mes"
+                  >
+                    Día 1
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDate(`${currentPeriod}-15`)}
+                    className="px-1.5 py-0.5 rounded bg-zinc-800 text-[10px] text-zinc-300 hover:text-white hover:bg-zinc-700"
+                    title="Día de quincena"
+                  >
+                    Día 15
+                  </button>
+                </div>
+              </div>
             </div>
 
-            {type === "gasto" && (
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-1.5">
-                  Método de Pago
-                </label>
+            {/* Payment / Account Method */}
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-1.5">
+                {type === "ingreso" ? "Cuenta Receptora / Destino" : "Método de Pago"}
+              </label>
+              <div className="relative">
                 <select
                   value={paymentMethod}
                   onChange={(e) => setPaymentMethod(e.target.value)}
                   className="w-full py-2.5 px-3 bg-zinc-950 border border-zinc-700/80 rounded-xl text-sm text-zinc-100 focus:outline-none focus:border-emerald-500"
+                  id="select-transaction-payment-method"
                 >
                   {paymentMethods.map((method) => (
                     <option key={method} value={method}>
@@ -354,11 +428,17 @@ export function TransactionModal() {
                   ))}
                 </select>
               </div>
-            )}
+              <p className="mt-1.5 text-[11px] text-zinc-500 truncate">
+                {type === "ingreso"
+                  ? "Cuenta donde se deposita la liquidez"
+                  : "Tarjeta o vía de desembolso"}
+              </p>
+            </div>
+
           </div>
 
           {/* Submit Actions */}
-          <div className="pt-3 flex items-center justify-end gap-3">
+          <div className="pt-3 flex items-center justify-end gap-3 border-t border-zinc-800/80">
             <button
               type="button"
               onClick={closeTransactionModal}

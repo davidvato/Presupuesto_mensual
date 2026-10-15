@@ -117,6 +117,18 @@ export async function ensureDatabaseInitialized() {
         `;
       }
     }
+
+    // Ensure initial income transaction exists for 2026-10 if none registered yet
+    const existingIncome = await sql`
+      SELECT COUNT(*)::int as count FROM transactions WHERE period = '2026-10' AND type = 'ingreso';
+    `;
+    if (existingIncome[0].count === 0) {
+      await sql`
+        INSERT INTO transactions (id, period, type, category_id, amount, date, concept, payment_method, notes)
+        VALUES ('tx_income_1', '2026-10', 'ingreso', 'cat_general', 13984, '2026-10-01', 'Nómina Quincenal / Ingresos del Mes', 'Transferencia / Nómina', null)
+        ON CONFLICT (id) DO NOTHING;
+      `;
+    }
   } catch (err) {
     console.error("Error initializing Neon database tables:", err);
   }

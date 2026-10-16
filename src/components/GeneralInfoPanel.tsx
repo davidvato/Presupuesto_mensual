@@ -158,11 +158,11 @@ export function GeneralInfoPanel() {
           </div>
         </div>
 
-        {/* 3. TOTAL TC BBVA */}
+        {/* 3. PAGO TC BBVA */}
         <div className="p-3.5 rounded-xl bg-gradient-to-br from-blue-950/40 to-zinc-950/70 border border-blue-500/30 flex flex-col justify-between hover:border-blue-500/50 transition-all">
           <div className="flex items-center justify-between mb-2">
             <span className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-blue-400">
-              Total TC BBVA
+              Pago TC BBVA
             </span>
             <div className="w-6 h-6 rounded-lg bg-blue-500/15 text-blue-400 flex items-center justify-center">
               <CreditCard className="w-3.5 h-3.5" />
@@ -173,17 +173,17 @@ export function GeneralInfoPanel() {
             <span className="text-base sm:text-lg font-bold text-white font-mono tracking-tight block">
               {formatMXN(generalInfo.totalTcBbva)}
             </span>
-            <div className="text-[10px] text-blue-300/80 font-medium truncate" title="Servicios + Gasolina + MSI + Varios">
-              Serv + Gas + MSI + Var
+            <div className="text-[10px] text-blue-300/80 font-medium truncate" title="Pagos realizados a TC BBVA">
+              Abono a tarjeta
             </div>
           </div>
         </div>
 
-        {/* 4. TOTAL TC INVEX */}
+        {/* 4. PAGO TC INVEX */}
         <div className="p-3.5 rounded-xl bg-gradient-to-br from-purple-950/40 to-zinc-950/70 border border-purple-500/30 flex flex-col justify-between hover:border-purple-500/50 transition-all">
           <div className="flex items-center justify-between mb-2">
             <span className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-purple-400">
-              Total TC Invex
+              Pago TC Invex
             </span>
             <div className="w-6 h-6 rounded-lg bg-purple-500/15 text-purple-400 flex items-center justify-center">
               <CreditCard className="w-3.5 h-3.5" />
@@ -194,8 +194,8 @@ export function GeneralInfoPanel() {
             <span className="text-base sm:text-lg font-bold text-white font-mono tracking-tight block">
               {formatMXN(generalInfo.totalTcInvex)}
             </span>
-            <div className="text-[10px] text-purple-300/80 font-medium truncate" title="Compras MSI + Gasolina Invex">
-              MSI + Gasolina Invex
+            <div className="text-[10px] text-purple-300/80 font-medium truncate" title="Pagos realizados a TC Invex">
+              Abono a tarjeta
             </div>
           </div>
         </div>

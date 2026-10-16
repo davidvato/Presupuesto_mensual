@@ -252,48 +252,53 @@ export function BudgetProvider({ children }: { children: React.ReactNode }) {
         const catId = (cat?.id || tx.categoryId || "").toLowerCase();
         const catName = (cat?.name || "").toLowerCase();
         const payMethod = (tx.paymentMethod || "").toLowerCase();
+        const concept = (tx.concept || "").toLowerCase();
 
-        if (catId === "cat_hipoteca" || catName.includes("hipoteca")) {
+        // 1. Identificar pagos a Tarjetas de Crédito (desembolso de efectivo para liquidar/abonar a TC)
+        const isTcPayment =
+          concept.includes("pago tc") ||
+          concept.includes("pago tarjeta") ||
+          concept.includes("abono tc") ||
+          (concept.includes("pago") && (concept.includes("bbva") || concept.includes("invex") || catId.includes("tc")));
+
+        if (isTcPayment) {
+          if (concept.includes("invex") || catId.includes("invex") || catName.includes("invex")) {
+            totalTcInvex += tx.amount;
+          } else {
+            totalTcBbva += tx.amount;
+          }
+        } else if (catId === "cat_hipoteca" || catName.includes("hipoteca") || concept.includes("casa")) {
           totalHipoteca += tx.amount;
-        } else if (catId === "cat_fondo_ahorro" || catName.includes("ahorro")) {
+        } else if (catId === "cat_fondo_ahorro" || catName.includes("ahorro") || concept.includes("skandia")) {
           totalFondoAhorro += tx.amount;
-        } else if (catId === "cat_gbm_inversion" || catName.includes("gbm")) {
+        } else if (catId === "cat_gbm_inversion" || catName.includes("gbm") || concept.includes("gbm")) {
           totalGbm += tx.amount;
-        } else if (
-          catId.includes("tc_bbva") ||
-          (payMethod.includes("tc") && payMethod.includes("bbva")) ||
-          catName.includes("tc bbva")
-        ) {
-          totalTcBbva += tx.amount;
-        } else if (
-          catId.includes("tc_invex") ||
-          (payMethod.includes("tc") && payMethod.includes("invex")) ||
-          catName.includes("tc invex")
-        ) {
-          totalTcInvex += tx.amount;
         } else if (
           catId.includes("td_") ||
           catName.includes("td ") ||
+          catName.includes("débito") ||
+          catName.includes("debito") ||
           payMethod.includes("td") ||
           payMethod.includes("débito") ||
           payMethod.includes("debito")
         ) {
           totalTd += tx.amount;
         } else if (
+          payMethod.includes("tc") ||
           catId.includes("tc_") ||
           catName.includes("tc ") ||
-          cat?.type === "credito_msi" ||
-          payMethod.includes("tc") ||
-          payMethod.includes("crédito") ||
-          payMethod.includes("credito")
+          cat?.type === "credito_msi"
         ) {
-          totalTcBbva += tx.amount;
+          // Compras realizadas con tarjeta de crédito:
+          // No descuentan efectivo disponible en este momento porque son crédito bancario;
+          // el efectivo se descuenta al momento de registrar el "Pago TC".
         } else {
-          totalOtherExpenses += tx.amount;
+          // Otros egresos directos de la cuenta / efectivo
+          totalTd += tx.amount;
         }
 
         // Watchlists
-        if (cat?.type === "transporte" || catName.includes("gasolina")) {
+        if (cat?.type === "transporte" || catName.includes("gasolina") || concept.includes("gasolina")) {
           totalGasolina += tx.amount;
         }
         if (cat?.type === "servicios" || catName.includes("servicios")) {
@@ -307,8 +312,7 @@ export function BudgetProvider({ children }: { children: React.ReactNode }) {
       totalHipoteca +
       totalFondoAhorro +
       totalGbm +
-      totalTd +
-      totalOtherExpenses;
+      totalTd;
 
     const availableCash = effectiveIncome - totalDeductions;
 

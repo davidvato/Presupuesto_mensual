@@ -141,7 +141,7 @@ export function TransactionModal() {
     }
   };
 
-  const quickAmounts = type === "ingreso" ? [1000, 3000, 5000, 6992, 13984] : [100, 250, 500, 1000, 2500];
+  const quickAmounts = type === "ingreso" ? [1000, 2500, 5000, 10000, 15000] : [100, 250, 500, 1000, 2500];
   const paymentMethods =
     type === "ingreso"
       ? ["Transferencia / Nómina", "Depósito Débito BBVA", "Efectivo", "Rendimientos GBM", "Otro"]

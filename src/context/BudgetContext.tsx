@@ -223,13 +223,8 @@ export function BudgetProvider({ children }: { children: React.ReactNode }) {
     const incomeTransactions = periodTransactions.filter((tx) => tx.type === "ingreso");
     const calculatedIncome = incomeTransactions.reduce((acc, tx) => acc + tx.amount, 0);
 
-    // Si aún no hay ingresos registrados explícitos en el mes de inicio, tomar el valor base de seed
-    const effectiveIncome =
-      calculatedIncome > 0
-        ? calculatedIncome
-        : currentPeriod === "2026-10" && generalInfoState.income > 0
-        ? generalInfoState.income
-        : calculatedIncome;
+    // Ingresos calculados estrictamente a partir de los movimientos de ingreso registrados
+    const effectiveIncome = calculatedIncome;
 
     // Fórmula solicitada por el usuario:
     // Efectivo Disponible = ingresos del mes
@@ -317,8 +312,8 @@ export function BudgetProvider({ children }: { children: React.ReactNode }) {
 
     const availableCash = effectiveIncome - totalDeductions;
 
-    // Match exact watchlist benchmark for Servicios if base recurring items exist ($2,515.00 MXN)
-    const displayServicios = totalServicios > 0 ? Math.max(totalServicios, 2515) : 2515;
+    // Watchlist de Servicios según gastos registrados
+    const displayServicios = totalServicios;
 
     return {
       period: currentPeriod,
@@ -336,7 +331,7 @@ export function BudgetProvider({ children }: { children: React.ReactNode }) {
       totalOtherExpenses,
       incomeCount: incomeTransactions.length,
     };
-  }, [categories, transactions, currentPeriod, generalInfoState]);
+  }, [categories, transactions, currentPeriod]);
 
   // Groups by Type for quick overview
   const typeGroups = useMemo<CategoryTypeGroup[]>(() => {
@@ -414,14 +409,6 @@ export function BudgetProvider({ children }: { children: React.ReactNode }) {
   const addTransactionAction = async (txData: Omit<Transaction, "id" | "createdAt">) => {
     const created = await budgetService.addTransaction(txData);
     setAllTransactions((prev) => [created, ...prev]);
-
-    // If it's an income, increment monthly income
-    if (txData.type === "ingreso") {
-      const newIncome = generalInfoState.income + txData.amount;
-      const newCash = generalInfoState.availableCash + txData.amount;
-      await updateGeneralInfo({ income: newIncome, availableCash: newCash });
-    }
-
     return created;
   };
 

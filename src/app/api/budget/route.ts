@@ -46,7 +46,7 @@ export async function GET(request: Request) {
           income: parseFloat(generalInfoRows[0].income),
           availableCash: parseFloat(generalInfoRows[0].availableCash),
         }
-      : { income: 13984, availableCash: 1282 };
+      : { income: 0, availableCash: 0 };
 
     // 4. Transactions for the period
     const transactionsRows = await sql`

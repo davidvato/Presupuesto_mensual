@@ -117,8 +117,8 @@ export const INITIAL_PLANNED_AMOUNTS: Record<string, number> = {
 };
 
 export const INITIAL_GENERAL_INFO = {
-  income: 13984,
-  availableCash: 1282,
+  income: 0,
+  availableCash: 0,
 };
 
 // Seed sample transactions for October 2026: Income ($13,984) and Expenses ($16,346)

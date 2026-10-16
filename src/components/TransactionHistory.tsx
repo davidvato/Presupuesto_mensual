@@ -80,10 +80,6 @@ export function TransactionHistory({
       });
   }, [transactions, selectedCategory, search, sortOrder, categoryMap]);
 
-  const totalFilteredAmount = useMemo(() => {
-    return filteredTransactions.reduce((acc, curr) => acc + curr.amount, 0);
-  }, [filteredTransactions]);
-
   const handleDelete = (tx: Transaction) => {
     requestConfirm({
       title: "¿Eliminar Movimiento?",
@@ -184,14 +180,6 @@ export function TransactionHistory({
             </button>
           )}
         </div>
-      </div>
-
-      {/* Filtered Total Bar */}
-      <div className="px-5 py-2 bg-zinc-950/40 border-b border-zinc-800/60 flex items-center justify-between text-xs">
-        <span className="text-zinc-400">Total filtrado:</span>
-        <span className="font-mono font-bold text-emerald-400 text-sm">
-          {formatMXN(totalFilteredAmount)}
-        </span>
       </div>
 
       {/* Transactions List */}

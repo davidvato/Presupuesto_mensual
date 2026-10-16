@@ -34,6 +34,7 @@ const AVAILABLE_ICONS = Object.keys(ICON_MAP);
 
 export function CategoryModal() {
   const {
+    categories,
     isCategoryModalOpen,
     closeCategoryModal,
     editingCategory,

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSql, isDatabaseConfigured, ensureDatabaseInitialized } from "@/lib/db";
-import { Category, Transaction } from "@/types/budget";
+import { Transaction } from "@/types/budget";
 
 export async function GET(request: Request) {
   if (!isDatabaseConfigured()) {

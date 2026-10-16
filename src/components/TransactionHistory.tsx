@@ -248,6 +248,28 @@ export function TransactionHistory({
                           </span>
                         </>
                       )}
+                      {(() => {
+                        const concept = (tx.concept || "").toLowerCase();
+                        const isTcPayment =
+                          concept.includes("pago tc") ||
+                          concept.includes("pago tarjeta") ||
+                          concept.includes("abono tc") ||
+                          (concept.includes("pago") && (concept.includes("bbva") || concept.includes("invex")));
+                        if (isTcPayment) {
+                          return (
+                            <>
+                              <span>•</span>
+                              <span
+                                className="px-1.5 py-0.2 rounded bg-blue-500/15 text-[10px] text-blue-300 font-medium border border-blue-500/25"
+                                title="Pago a tarjeta de crédito para liquidar deuda (no infla compras de categoría, impacta en Efectivo Disponible)"
+                              >
+                                Abono a Tarjeta
+                              </span>
+                            </>
+                          );
+                        }
+                        return null;
+                      })()}
                     </div>
                   </div>
                 </div>

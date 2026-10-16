@@ -172,11 +172,20 @@ export function BudgetProvider({ children }: { children: React.ReactNode }) {
     const countMap: Record<string, number> = {};
 
     transactions.forEach((tx) => {
-      // Only count expense transactions for category actuals
-      if (tx.type !== "ingreso") {
-        actualMap[tx.categoryId] = (actualMap[tx.categoryId] || 0) + (tx.amount || 0);
-        countMap[tx.categoryId] = (countMap[tx.categoryId] || 0) + 1;
-      }
+      // Solo contar gastos de consumo corriente en las categorías (excluir ingresos y pagos de tarjetas de crédito)
+      if (tx.type === "ingreso") return;
+
+      const concept = (tx.concept || "").toLowerCase();
+      const isTcPayment =
+        concept.includes("pago tc") ||
+        concept.includes("pago tarjeta") ||
+        concept.includes("abono tc") ||
+        (concept.includes("pago") && (concept.includes("bbva") || concept.includes("invex")));
+
+      if (isTcPayment) return;
+
+      actualMap[tx.categoryId] = (actualMap[tx.categoryId] || 0) + (tx.amount || 0);
+      countMap[tx.categoryId] = (countMap[tx.categoryId] || 0) + 1;
     });
 
     const categorySummaries: CategorySummary[] = categories

@@ -1,12 +1,14 @@
 import { BudgetSummary, Transaction } from "@/types/budget";
-import { getPeriodInfo } from "@/utils/formatters";
+import { getPeriodInfo, getCycleLabel } from "@/utils/formatters";
 
-export function generateBudgetCsv(summary: BudgetSummary, transactions: Transaction[]): string {
+export function generateBudgetCsv(summary: BudgetSummary, transactions: Transaction[], cycleStartDay: number = 1): string {
   const { label } = getPeriodInfo(summary.period);
+  const cycleLabel = getCycleLabel(summary.period, cycleStartDay);
+  const reportTitle = cycleStartDay > 1 ? cycleLabel.toUpperCase() : label.toUpperCase();
   const rows: string[] = [];
 
   // Title / Metadata
-  rows.push(`"REPORTE DE PRESUPUESTO PERSONAL - ${label.toUpperCase()}"`);
+  rows.push(`"REPORTE DE PRESUPUESTO PERSONAL - ${reportTitle}"`);
   rows.push(`"Generado el:","${new Date().toLocaleString("es-MX")}"`);
   rows.push("");
 

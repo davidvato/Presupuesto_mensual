@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useBudget } from "@/context/BudgetContext";
-import { getPeriodInfo, getCurrentPeriodKey } from "@/utils/formatters";
+import { getPeriodInfo, getCurrentPeriodKey, getCycleLabel } from "@/utils/formatters";
 import {
   ChevronLeft,
   ChevronRight,
@@ -13,6 +13,7 @@ import {
   Sparkles,
   RotateCcw,
   SlidersHorizontal,
+  Settings2,
 } from "lucide-react";
 
 export function Header() {
@@ -30,11 +31,14 @@ export function Header() {
     resetAllData,
     requestConfirm,
     isDatabaseActive,
+    cycleStartDay,
+    openCycleSettings,
   } = useBudget();
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const periodInfo = getPeriodInfo(currentPeriod);
-  const isCurrentMonth = currentPeriod === getCurrentPeriodKey();
+  const cycleRangeLabel = getCycleLabel(currentPeriod, cycleStartDay);
+  const isCurrentMonth = currentPeriod === getCurrentPeriodKey(cycleStartDay);
 
   return (
     <header className="sticky top-0 z-30 w-full backdrop-blur-xl bg-zinc-950/80 border-b border-zinc-800/80 transition-all">
@@ -103,50 +107,58 @@ export function Header() {
           </div>
 
           {/* Period Selector (Month & Year Navigation) */}
-          <div className="flex items-center justify-center bg-zinc-900/90 border border-zinc-800/90 rounded-2xl p-1 shadow-inner self-center md:self-auto w-full md:w-auto">
-            <button
-              onClick={goToPreviousPeriod}
-              aria-label="Mes anterior"
-              className="p-2 hover:bg-zinc-800 text-zinc-300 hover:text-white rounded-xl transition-colors active:scale-95"
-              id="btn-prev-month"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-
-            <div className="relative flex items-center gap-2 px-3 py-1 text-center min-w-[160px] justify-center cursor-pointer group hover:bg-zinc-800/50 rounded-xl transition-colors">
-              <input
-                type="month"
-                value={currentPeriod}
-                onChange={(e) => {
-                  if (e.target.value) setCurrentPeriod(e.target.value);
-                }}
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10 [color-scheme:dark]"
-                title="Haz clic para seleccionar cualquier mes y año"
-                id="header-month-picker"
-              />
-              <Calendar className="w-4 h-4 text-emerald-400 group-hover:scale-110 transition-transform" />
-              <span className="font-semibold text-sm md:text-base text-zinc-100 tracking-wide group-hover:text-emerald-300 transition-colors">
-                {periodInfo.label}
-              </span>
-            </div>
-
-            <button
-              onClick={goToNextPeriod}
-              aria-label="Mes siguiente"
-              className="p-2 hover:bg-zinc-800 text-zinc-300 hover:text-white rounded-xl transition-colors active:scale-95"
-              id="btn-next-month"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-
-            {!isCurrentMonth && (
+          <div className="flex flex-col items-center gap-1 w-full md:w-auto">
+            <div className="flex items-center justify-center bg-zinc-900/90 border border-zinc-800/90 rounded-2xl p-1 shadow-inner self-center md:self-auto w-full md:w-auto">
               <button
-                onClick={goToCurrentMonth}
-                className="ml-1 text-[11px] font-medium px-2 py-1 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 rounded-lg transition-colors border border-emerald-500/20"
-                title="Volver al mes actual"
+                onClick={goToPreviousPeriod}
+                aria-label="Mes anterior"
+                className="p-2 hover:bg-zinc-800 text-zinc-300 hover:text-white rounded-xl transition-colors active:scale-95"
+                id="btn-prev-month"
               >
-                Hoy
+                <ChevronLeft className="w-4 h-4" />
               </button>
+
+              <div className="relative flex items-center gap-2 px-3 py-1 text-center min-w-[160px] justify-center cursor-pointer group hover:bg-zinc-800/50 rounded-xl transition-colors">
+                <input
+                  type="month"
+                  value={currentPeriod}
+                  onChange={(e) => {
+                    if (e.target.value) setCurrentPeriod(e.target.value);
+                  }}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10 [color-scheme:dark]"
+                  title="Haz clic para seleccionar cualquier mes y año"
+                  id="header-month-picker"
+                />
+                <Calendar className="w-4 h-4 text-emerald-400 group-hover:scale-110 transition-transform" />
+                <span className="font-semibold text-sm md:text-base text-zinc-100 tracking-wide group-hover:text-emerald-300 transition-colors">
+                  {periodInfo.label}
+                </span>
+              </div>
+
+              <button
+                onClick={goToNextPeriod}
+                aria-label="Mes siguiente"
+                className="p-2 hover:bg-zinc-800 text-zinc-300 hover:text-white rounded-xl transition-colors active:scale-95"
+                id="btn-next-month"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+
+              {!isCurrentMonth && (
+                <button
+                  onClick={goToCurrentMonth}
+                  className="ml-1 text-[11px] font-medium px-2 py-1 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 rounded-lg transition-colors border border-emerald-500/20"
+                  title="Volver al ciclo actual"
+                >
+                  Hoy
+                </button>
+              )}
+            </div>
+            {/* Cycle range label */}
+            {cycleStartDay > 1 && (
+              <span className="text-[10px] text-zinc-500 font-medium tracking-wide">
+                {cycleRangeLabel}
+              </span>
             )}
           </div>
 
@@ -204,6 +216,15 @@ export function Header() {
               title="Reiniciar datos de demostración"
             >
               <RotateCcw className="w-3.5 h-3.5" />
+            </button>
+
+            <button
+              onClick={openCycleSettings}
+              className="p-2 text-zinc-400 hover:text-indigo-400 hover:bg-indigo-500/10 rounded-xl border border-transparent hover:border-indigo-500/20 transition-colors"
+              title="Configurar día de inicio del ciclo de registro"
+              id="btn-cycle-settings"
+            >
+              <Settings2 className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>

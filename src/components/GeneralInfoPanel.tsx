@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useBudget } from "@/context/BudgetContext";
-import { formatMXN } from "@/utils/formatters";
+import { formatMXN, getCycleLabel } from "@/utils/formatters";
 import {
   Wallet,
   Banknote,
@@ -21,10 +21,11 @@ import {
 } from "lucide-react";
 
 export function GeneralInfoPanel() {
-  const { generalInfo, openTransactionModal } = useBudget();
+  const { generalInfo, openTransactionModal, currentPeriod, cycleStartDay } = useBudget();
   const [showBreakdown, setShowBreakdown] = useState(false);
 
   const isCashPositive = generalInfo.availableCash >= 0;
+  const cycleRangeLabel = getCycleLabel(currentPeriod, cycleStartDay);
 
   return (
     <div className="rounded-2xl bg-zinc-900/60 border border-zinc-800/80 p-4 sm:p-5 backdrop-blur-md shadow-xl space-y-4">
@@ -46,6 +47,11 @@ export function GeneralInfoPanel() {
             <p className="text-xs text-zinc-400">
               Resumen ejecutivo calculado dinámicamente según ingresos y egresos registrados
             </p>
+            {cycleStartDay > 1 && (
+              <p className="text-[10px] text-indigo-400/80 font-medium mt-0.5">
+                Ciclo: {cycleRangeLabel}
+              </p>
+            )}
           </div>
         </div>
 

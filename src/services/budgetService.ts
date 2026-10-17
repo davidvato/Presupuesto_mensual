@@ -38,6 +38,9 @@ export interface IBudgetService {
 
   getAvailablePeriods(): Promise<string[]>;
   resetToDefaults(): Promise<void>;
+
+  getCycleStartDay(): Promise<number>;
+  saveCycleStartDay(day: number): Promise<void>;
 }
 
 const STORAGE_KEYS = {
@@ -46,6 +49,7 @@ const STORAGE_KEYS = {
   GENERAL_INFO_PREFIX: "finance_app_general_info_v3_",
   TRANSACTIONS: "finance_app_transactions_v3",
   PERIODS: "finance_app_periods_v3",
+  CYCLE_START_DAY: "finance_app_cycle_start_day",
 };
 
 /**
@@ -291,6 +295,26 @@ export class LocalStorageBudgetService implements IBudgetService {
     } catch (err) {
       console.error("Error resetting defaults:", err);
     }
+  }
+
+  async getCycleStartDay(): Promise<number> {
+    if (!this.isBrowser()) return 1;
+    try {
+      const stored = localStorage.getItem(STORAGE_KEYS.CYCLE_START_DAY);
+      if (stored) {
+        const day = parseInt(stored, 10);
+        return isNaN(day) ? 1 : Math.max(1, Math.min(28, day));
+      }
+      return 1;
+    } catch {
+      return 1;
+    }
+  }
+
+  async saveCycleStartDay(day: number): Promise<void> {
+    if (!this.isBrowser()) return;
+    const clamped = Math.max(1, Math.min(28, day));
+    localStorage.setItem(STORAGE_KEYS.CYCLE_START_DAY, String(clamped));
   }
 
   syncFromNeon(data: {
@@ -566,6 +590,39 @@ export class NeonHybridBudgetService implements IBudgetService {
       console.warn("Neon resetToDefaults error, resetting locally:", err);
     }
     await this.localService.resetToDefaults();
+  }
+
+  async getCycleStartDay(): Promise<number> {
+    try {
+      const res = await fetch("/api/settings", { cache: "no-store" });
+      if (res.ok) {
+        const data = await res.json();
+        const day = parseInt(data.cycleStartDay, 10);
+        const clamped = isNaN(day) ? 1 : Math.max(1, Math.min(28, day));
+        await this.localService.saveCycleStartDay(clamped);
+        return clamped;
+      }
+    } catch (err) {
+      console.warn("Neon getCycleStartDay error, reading locally:", err);
+    }
+    return this.localService.getCycleStartDay();
+  }
+
+  async saveCycleStartDay(day: number): Promise<void> {
+    try {
+      const res = await fetch("/api/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cycleStartDay: day }),
+      });
+      if (res.ok) {
+        await this.localService.saveCycleStartDay(day);
+        return;
+      }
+    } catch (err) {
+      console.warn("Neon saveCycleStartDay error, saving locally:", err);
+    }
+    await this.localService.saveCycleStartDay(day);
   }
 }
 

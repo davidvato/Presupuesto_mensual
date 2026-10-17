@@ -6,6 +6,7 @@ import {
   getTodayDateString,
   getYesterdayDateString,
   formatFullDateES,
+  getPeriodForDate,
 } from "@/utils/formatters";
 import { TransactionType } from "@/types/budget";
 import {
@@ -28,6 +29,7 @@ export function TransactionModal() {
     closeTransactionModal,
     categories,
     currentPeriod,
+    cycleStartDay,
     addTransaction,
     updateTransaction,
     editingTransaction,
@@ -94,7 +96,7 @@ export function TransactionModal() {
       setIsSubmitting(true);
       setError("");
 
-      const periodFromDate = date.slice(0, 7) || currentPeriod;
+      const periodFromDate = date ? getPeriodForDate(date, cycleStartDay) : currentPeriod;
       const finalCategory = categoryId || categories[0]?.id || "cat_general";
 
       if (editingTransaction) {

@@ -39,6 +39,7 @@ export async function ensureDatabaseInitialized() {
         type VARCHAR(50) NOT NULL,
         type_label VARCHAR(100) NOT NULL,
         icon_name VARCHAR(50) NOT NULL,
+        color VARCHAR(20) NOT NULL DEFAULT '#6366f1',
         order_num BIGINT NOT NULL DEFAULT 0,
         is_active BOOLEAN NOT NULL DEFAULT true
       );
@@ -49,6 +50,13 @@ export async function ensureDatabaseInitialized() {
       await sql`ALTER TABLE categories ALTER COLUMN order_num TYPE BIGINT;`;
     } catch {
       // Column may already be BIGINT or up to date
+    }
+
+    // Ensure color column exists on existing databases
+    try {
+      await sql`ALTER TABLE categories ADD COLUMN IF NOT EXISTS color VARCHAR(20) NOT NULL DEFAULT '#6366f1';`;
+    } catch {
+      // Column may already exist
     }
 
     // 2. Create monthly_planned table

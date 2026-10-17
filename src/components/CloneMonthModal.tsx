@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { useBudget } from "@/context/BudgetContext";
-import { getPeriodInfo, shiftPeriod, formatMXN } from "@/utils/formatters";
+import { getPeriodInfo, shiftPeriod, formatMXN, getCycleLabel } from "@/utils/formatters";
 import { Copy, X, ArrowRight, CheckCircle2, Calendar } from "lucide-react";
 
 export function CloneMonthModal() {
@@ -12,6 +12,7 @@ export function CloneMonthModal() {
     currentPeriod,
     summary,
     cloneBudgetToNextMonth,
+    cycleStartDay,
   } = useBudget();
 
   const [targetPeriod, setTargetPeriod] = useState<string>("");
@@ -30,7 +31,10 @@ export function CloneMonthModal() {
   if (!isCloneModalOpen) return null;
 
   const currentInfo = getPeriodInfo(currentPeriod);
-  const targetInfo = getPeriodInfo(targetPeriod || shiftPeriod(currentPeriod, 1));
+  const currentCycleLabel = getCycleLabel(currentPeriod, cycleStartDay);
+  const targetEffective = targetPeriod || shiftPeriod(currentPeriod, 1);
+  const targetInfo = getPeriodInfo(targetEffective);
+  const targetCycleLabel = getCycleLabel(targetEffective, cycleStartDay);
 
   const handleClone = async () => {
     try {
@@ -103,16 +107,20 @@ export function CloneMonthModal() {
             <div className="flex items-center justify-between p-4 rounded-2xl bg-zinc-950/60 border border-zinc-800 text-center">
               <div>
                 <span className="text-[10px] uppercase text-zinc-400 block font-semibold">
-                  Mes Origen
+                  Ciclo Origen
                 </span>
-                <span className="text-sm font-bold text-zinc-200">{currentInfo.label}</span>
+                <span className="text-sm font-bold text-zinc-200">
+                  {cycleStartDay > 1 ? currentCycleLabel : currentInfo.label}
+                </span>
               </div>
               <ArrowRight className="w-5 h-5 text-indigo-400" />
               <div>
                 <span className="text-[10px] uppercase text-emerald-400 block font-semibold">
-                  Mes Destino
+                  Ciclo Destino
                 </span>
-                <span className="text-sm font-bold text-emerald-400">{targetInfo.label}</span>
+                <span className="text-sm font-bold text-emerald-400">
+                  {cycleStartDay > 1 ? targetCycleLabel : targetInfo.label}
+                </span>
               </div>
             </div>
 

@@ -14,6 +14,7 @@ import {
 } from "@/components/TransactionModal";
 import { CategoryModal } from "@/components/CategoryModal";
 import { CloneMonthModal } from "@/components/CloneMonthModal";
+import { CycleSettingsModal } from "@/components/CycleSettingsModal";
 import { ShieldCheck, Sparkles } from "lucide-react";
 
 function DashboardContent() {
@@ -103,6 +104,7 @@ function DashboardContent() {
       <FloatingActionButton />
       <CategoryModal />
       <CloneMonthModal />
+      <CycleSettingsModal />
     </div>
   );
 }

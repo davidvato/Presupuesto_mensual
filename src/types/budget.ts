@@ -90,3 +90,8 @@ export interface CategoryTypeGroup {
   difference: number;
   categories: CategorySummary[];
 }
+
+export interface CycleConfig {
+  /** Day of month on which the billing cycle starts. Range: 1–28. Default: 1 (calendar month). */
+  cycleStartDay: number;
+}

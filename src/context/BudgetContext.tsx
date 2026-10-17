@@ -10,7 +10,7 @@ import {
   MonthlyGeneralInfo,
 } from "@/types/budget";
 import { budgetService } from "@/services/budgetService";
-import { calculateBudgetStatus, getCurrentPeriodKey, shiftPeriod } from "@/utils/formatters";
+import { calculateBudgetStatus, getCurrentPeriodKey, shiftPeriod, getPeriodForDate } from "@/utils/formatters";
 import { generateBudgetCsv, downloadCsv } from "@/services/csvExport";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { INITIAL_GENERAL_INFO } from "@/data/initialData";
@@ -41,6 +41,13 @@ interface BudgetContextType {
   availablePeriods: string[];
   isLoading: boolean;
   isDatabaseActive: boolean;
+
+  // Cycle config
+  cycleStartDay: number;
+  saveCycleStartDay: (day: number) => Promise<void>;
+  isCycleSettingsOpen: boolean;
+  openCycleSettings: () => void;
+  closeCycleSettings: () => void;
 
   // Actions
   updatePlannedAmount: (categoryId: string, amount: number) => Promise<void>;
@@ -88,6 +95,10 @@ export function BudgetProvider({ children }: { children: React.ReactNode }) {
   const [generalInfoState, setGeneralInfoState] = useState<{ income: number; availableCash: number }>(INITIAL_GENERAL_INFO);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isDatabaseActive, setIsDatabaseActive] = useState<boolean>(false);
+
+  // Cycle config state
+  const [cycleStartDay, setCycleStartDayState] = useState<number>(1);
+  const [isCycleSettingsOpen, setIsCycleSettingsOpen] = useState(false);
 
   // Modals state
   const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
@@ -155,6 +166,18 @@ export function BudgetProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsLoading(false);
     }
+  }, []);
+
+  useEffect(() => {
+    // Load cycle start day on mount
+    budgetService.getCycleStartDay().then((day) => {
+      setCycleStartDayState(day);
+      // Navigate to the correct current period based on cycle config
+      const correctPeriod = getCurrentPeriodKey(day);
+      setCurrentPeriod(correctPeriod);
+      loadPeriodData(correctPeriod);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -446,7 +469,7 @@ export function BudgetProvider({ children }: { children: React.ReactNode }) {
   };
 
   const exportCsv = () => {
-    const csvData = generateBudgetCsv(summary, transactions);
+    const csvData = generateBudgetCsv(summary, transactions, cycleStartDay);
     const filename = `Presupuesto_${currentPeriod}.csv`;
     downloadCsv(filename, csvData);
   };
@@ -471,8 +494,19 @@ export function BudgetProvider({ children }: { children: React.ReactNode }) {
   };
 
   const goToCurrentMonth = () => {
-    setCurrentPeriod(getCurrentPeriodKey());
+    setCurrentPeriod(getCurrentPeriodKey(cycleStartDay));
   };
+
+  const saveCycleStartDayAction = async (day: number) => {
+    const clamped = Math.max(1, Math.min(28, day));
+    await budgetService.saveCycleStartDay(clamped);
+    setCycleStartDayState(clamped);
+    // Navigate to the correct current period with the new cycle config
+    setCurrentPeriod(getCurrentPeriodKey(clamped));
+  };
+
+  const openCycleSettings = () => setIsCycleSettingsOpen(true);
+  const closeCycleSettings = () => setIsCycleSettingsOpen(false);
 
   // Modals helpers
   const openTransactionModal = (categoryId?: string, editTx?: Transaction, defaultType?: "gasto" | "ingreso") => {
@@ -521,6 +555,12 @@ export function BudgetProvider({ children }: { children: React.ReactNode }) {
         availablePeriods,
         isLoading,
         isDatabaseActive,
+
+        cycleStartDay,
+        saveCycleStartDay: saveCycleStartDayAction,
+        isCycleSettingsOpen,
+        openCycleSettings,
+        closeCycleSettings,
 
         updatePlannedAmount,
         updateGeneralInfo,
